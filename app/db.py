@@ -1,16 +1,20 @@
 from app import app
-from flask_mysqldb import MySQL
+from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # take environment variables from .env.
+load_dotenv()  # Lädt die Umgebungsvariablen aus der .env-Datei
 
-# Mysql Settings
-app.config['MYSQL_USER'] = os.getenv('MYSQL_USER') or 'root'
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD') or ''
-app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST') or '127.0.0.1' # localhost
-app.config['MYSQL_DB'] = os.getenv('MYSQL_DB') or 'flask-crud-contacts-app'
-app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+# Konstruiert die SQLAlchemy URI basierend auf den Umgebungsvariablen
+user = os.getenv('MYSQL_USER', 'root')
+password = os.getenv('MYSQL_PASSWORD', '')
+host = os.getenv('MYSQL_HOST', '127.0.0.1')
+database = os.getenv('MYSQL_DB', 'flask-crud-contacts-app')
+sqlalchemy_database_uri = f"mysql+pymysql://{user}:{password}@{host}/{database}"
 
-# MySQL Connection
-mysql = MySQL(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = sqlalchemy_database_uri
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# SQLAlchemy-Instanz
+db = SQLAlchemy()
+

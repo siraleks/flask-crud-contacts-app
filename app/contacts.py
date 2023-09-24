@@ -1,17 +1,17 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash
-from db import mysql
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from db import db
+from models import Contact
 
-contacts = Blueprint('contacts', __name__, template_folder='app/templates')
-
+contacts = Blueprint('contacts', __name__, template_folder='templates')
 
 @contacts.route('/')
-def Index():
-    cur = mysql.connection.cursor()
-    cur.execute('SELECT * FROM contacts')
-    data = cur.fetchall()
-    cur.close()
-    return render_template('index.html', contacts=data)
+def index():
+    # Alle Kontakte abfragen
+    all_contacts = Contact.query.all()
+    return render_template('index.html', contacts=all_contacts)
 
+
+# ... [Previous code]
 
 @contacts.route('/add_contact', methods=['POST'])
 def add_contact():
@@ -19,51 +19,51 @@ def add_contact():
         fullname = request.form['fullname']
         phone = request.form['phone']
         email = request.form['email']
+
+        new_contact = Contact(fullname=fullname, phone=phone, email=email)
+
         try:
-            cur = mysql.connection.cursor()
-            cur.execute(
-                "INSERT INTO contacts (fullname, phone, email) VALUES (%s,%s,%s)", (fullname, phone, email))
-            mysql.connection.commit()
-            flash('Contact Added successfully')
-            return redirect(url_for('contacts.Index'))
-        except Exception as e:
-            flash(e.args[1])
-            return redirect(url_for('contacts.Index'))
+            db.session.add(new_contact)
+            db.session.commit()
+            flash('Contact added successfully')
+        except:
+            flash('Error adding the contact')
+
+    return redirect(url_for('contacts.index'))
 
 
-@contacts.route('/edit/<id>', methods=['POST', 'GET'])
+@contacts.route('/edit/<id>')
 def get_contact(id):
-    cur = mysql.connection.cursor()
-    cur.execute('SELECT * FROM contacts WHERE id = %s', (id))
-    data = cur.fetchall()
-    cur.close()
-    print(data[0])
-    return render_template('edit-contact.html', contact=data[0])
+    contact = Contact.query.get(id)
+    return render_template('edit-contact.html', contact=contact)
 
 
 @contacts.route('/update/<id>', methods=['POST'])
 def update_contact(id):
     if request.method == 'POST':
-        fullname = request.form['fullname']
-        phone = request.form['phone']
-        email = request.form['email']
-        cur = mysql.connection.cursor()
-        cur.execute("""
-            UPDATE contacts
-            SET fullname = %s,
-                email = %s,
-                phone = %s
-            WHERE id = %s
-        """, (fullname, email, phone, id))
-        flash('Contact Updated Successfully')
-        mysql.connection.commit()
-        return redirect(url_for('contacts.Index'))
+        contact = Contact.query.get(id)
+        contact.fullname = request.form['fullname']
+        contact.phone = request.form['phone']
+        contact.email = request.form['email']
+
+        try:
+            db.session.commit()
+            flash('Contact updated successfully')
+        except:
+            flash('Error updating the contact')
+
+    return redirect(url_for('contacts.index'))
 
 
-@contacts.route('/delete/<string:id>', methods=['POST', 'GET'])
+@contacts.route('/delete/<id>')
 def delete_contact(id):
-    cur = mysql.connection.cursor()
-    cur.execute('DELETE FROM contacts WHERE id = {0}'.format(id))
-    mysql.connection.commit()
-    flash('Contact Removed Successfully')
-    return redirect(url_for('contacts.Index'))
+    contact = Contact.query.get(id)
+
+    try:
+        db.session.delete(contact)
+        db.session.commit()
+        flash('Contact deleted successfully')
+    except:
+        flash('Error deleting the contact')
+
+    return redirect(url_for('contacts.index'))
